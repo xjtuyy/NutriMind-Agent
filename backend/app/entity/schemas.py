@@ -20,6 +20,11 @@ class UserLogin(BaseModel):
     username: str = Field(..., description="用户名")
     password: str = Field(..., description="密码")
 
+class ChangePassword(BaseModel):
+    """修改密码请求"""
+    old_password: str = Field(..., description="旧密码")
+    new_password: str = Field(..., min_length=6, description="新密码")
+
 class UserUpdate(BaseModel):
     """用户更新请求"""
     email: Optional[EmailStr] = None

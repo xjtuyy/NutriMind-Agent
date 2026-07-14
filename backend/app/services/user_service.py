@@ -49,9 +49,8 @@ class UserService:
     def create_access_token_for_user(self, user: User) -> str:
         """为⽤户创建 JWT Token"""
         return create_token({"sub": str(user.id)})
-    
     def get_user_roles(self, db: Session, user: User) -> list:
-        """获取⽤户⻆⾊列表"""
+        """获取用户角色列表"""
         user_roles = db.query(UserRole).filter(UserRole.user_id == user.id).all()
         roles = []
         for ur in user_roles:
@@ -59,5 +58,20 @@ class UserService:
             if role:
                 roles.append(role.name)
         return roles
+
+    def change_password(self, db: Session, user_id: int, old_password: str, new_password: str):
+        """修改密码"""
+        user = db.query(User).filter(User.id == user_id).first()
+        if not user:
+            raise ValueError("用户不存在")
+
+        # 验证旧密码
+        if not verify_password(old_password, user.hashed_password):
+            raise ValueError("旧密码错误")
+
+        # 更新密码
+        user.hashed_password = hash_password(new_password)
+        db.commit()
+
 # 全局单例
 user_service = UserService()
