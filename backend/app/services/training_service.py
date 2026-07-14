@@ -21,7 +21,7 @@ from typing import Optional
 from sqlalchemy.orm import Session
 
 from app.config.settings import settings
-from app.database.session import SessionLocal
+from app.database.session import get_session_local
 from app.entity.db_models import TrainingTask
 from app.entity.schemas import TrainingTaskCreate
 
@@ -155,7 +155,7 @@ class TrainingService:
         db: Optional[Session] = None
         try:
             # 独立会话
-            db = SessionLocal()
+            db = get_session_local()()
             task = db.query(TrainingTask).filter(
                 TrainingTask.task_uuid == task_uuid
             ).first()
@@ -180,7 +180,8 @@ class TrainingService:
             # —— 全部通过 asyncio.to_thread 放入线程池，不阻塞事件循环
             from ultralytics import YOLO
 
-            model_path = str(base_model_path) if base_model_path.exists() else base_model
+            model_path = str(
+                base_model_path) if base_model_path.exists() else base_model
 
             def _train_sync() -> dict:
                 """同步训练函数，在线程池中执行。"""
@@ -205,17 +206,20 @@ class TrainingService:
                     else None
                 ),
                 "mAP50-95": (
-                    float(train_results.results_dict.get("metrics/mAP50-95(B)", 0))
+                    float(train_results.results_dict.get(
+                        "metrics/mAP50-95(B)", 0))
                     if hasattr(train_results, "results_dict")
                     else None
                 ),
                 "precision": (
-                    float(train_results.results_dict.get("metrics/precision(B)", 0))
+                    float(train_results.results_dict.get(
+                        "metrics/precision(B)", 0))
                     if hasattr(train_results, "results_dict")
                     else None
                 ),
                 "recall": (
-                    float(train_results.results_dict.get("metrics/recall(B)", 0))
+                    float(train_results.results_dict.get(
+                        "metrics/recall(B)", 0))
                     if hasattr(train_results, "results_dict")
                     else None
                 ),
