@@ -67,10 +67,9 @@ async def get_current_user(
     token: Optional[str] = Depends(oauth2_scheme),
     db: Session = Depends(get_db)
 ):
-    """获取当前⽤户（⽀持 Header 和 Cookie 双通道）"""
+    """获取当前用户：Bearer Header 优先，缺失时读取 HttpOnly Cookie。"""
     from app.entity.db_models import User
 
-    # 如果 Header 中没有 Token，尝试从 Cookie 获取
     if not token:
         token = request.cookies.get("access_token")
 
