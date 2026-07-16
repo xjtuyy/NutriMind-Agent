@@ -15,12 +15,18 @@ Agent 工具函数模块 — 为 LLM Agent 提供可调用的 Python 工具。
 import asyncio
 import json
 import logging
+from sqlalchemy.exc import SQLAlchemyError
 from app.database.session import get_session_local
 from app.entity.db_models import DetectionTask, FoodNutrition, User
 from app.services.image_store import image_store
 
 logger = logging.getLogger(__name__)
 _yolo_model = None
+
+
+def SessionLocal():
+    """兼容旧调用方式，同时保留 main 分支的延迟数据库初始化。"""
+    return get_session_local()()
 
 # 模型联调阶段的内置演示数据。数据库可用时优先使用数据库；数据库未初始化时，
 # 常见食物仍可完成 YOLO JSON → 营养计算 → Agent 建议的端到端验证。
@@ -161,7 +167,7 @@ async def query_food_calories(food_name: str) -> str:
         格式化的营养信息文本，如果未找到则返回提示信息。
     """
     def _query_sync(food_name: str) -> str:
-        db = get_session_local()()
+        db = SessionLocal()
         try:
             # 模糊查询：先精确匹配，再模糊匹配
             food = (
@@ -229,7 +235,7 @@ async def query_food_by_category(category: str) -> str:
         格式化的食物列表文本
     """
     def _query_sync(category: str) -> str:
-        db = get_session_local()()
+        db = SessionLocal()
         try:
             foods = (
                 db.query(FoodNutrition)
@@ -287,7 +293,8 @@ async def calculate_total_nutrition(food_items_json: str) -> str:
         if not items:
             return "食物清单为空，无法计算。"
 
-        db = get_session_local()()
+        db = SessionLocal()
+        database_available = True
         try:
             total_calories = 0.0
             total_protein = 0.0
@@ -392,7 +399,7 @@ async def get_user_profile(user_id: int) -> str:
         格式化的用户档案文本
     """
     def _get_sync(user_id: int) -> str:
-        db = get_session_local()()
+        db = SessionLocal()
         try:
             user = db.query(User).filter(User.id == user_id).first()
             if not user:
@@ -438,7 +445,7 @@ async def save_detection_record(
 
         import uuid
 
-        db = get_session_local()()
+        db = SessionLocal()
         try:
             task = DetectionTask(
                 user_id=user_id,
