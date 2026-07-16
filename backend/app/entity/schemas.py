@@ -230,6 +230,26 @@ class ModelInfoResponse(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
 
+class TrainingMetricsLineChart(BaseModel):
+    """训练折线图数据 — 每个 epoch 的指标，前端直接用于 Chart.js/ECharts"""
+    task_uuid: str = Field(..., description="训练任务 UUID")
+    model_name: str = Field(..., description="模型名称")
+    epochs: List[dict] = Field(
+        default_factory=list,
+        description="per-epoch 数据，每项含 epoch/train_box_loss/train_cls_loss/val_box_loss/val_cls_loss/mAP50/mAP50_95/precision/recall"
+    )
+    final_metrics: Optional[dict] = Field(default=None, description="最终汇总指标")
+
+
+class DetectionUploadResponse(BaseModel):
+    """图片上传检测响应（兼容现有 DetectionResponse）"""
+    task_id: Optional[int] = Field(default=None, description="任务数据库 ID")
+    task_uuid: str = Field(..., description="任务 UUID")
+    detections: list = Field(default_factory=list, description="检测结果列表")
+    total_objects: int = Field(default=0, description="检测到的目标总数")
+    inference_time: float = Field(..., description="推理耗时（秒）")
+
+
 # ============================================================
 # 食物营养相关 Schema（Agent 工具用）
 # ============================================================

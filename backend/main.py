@@ -3,6 +3,8 @@ from app.api.auth import router as auth_router
 from app.api.dashboard import router as dashboard_router
 from app.api.camera import router as camera_router
 from app.api.chat import router as chat_router
+from app.api.detection import router as detection_router
+from app.api.training import router as training_router
 from app.api.profile import router as profile_router
 from contextlib import asynccontextmanager
 from fastapi import FastAPI
@@ -60,6 +62,8 @@ app.include_router(knowledge_router)
 app.include_router(dashboard_router)
 app.include_router(camera_router)
 app.include_router(chat_router)
+app.include_router(detection_router)
+app.include_router(training_router)
 app.include_router(profile_router)
 
 
