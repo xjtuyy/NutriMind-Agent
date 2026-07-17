@@ -148,11 +148,42 @@ async def detect_food(image_id: str, conf_threshold: float = 0.1) -> str:
 
         detections = await asyncio.to_thread(_predict)
         low_conf_count = sum(1 for d in detections if d.get("low_confidence"))
+
+        # ---- 自动保存检测记录到数据库 ----
+        task_uuid_str = None
+        try:
+            import uuid as _uuid
+            db = SessionLocal()
+            try:
+                task_uuid_str = str(_uuid.uuid4())
+                task = DetectionTask(
+                    user_id=None,  # Agent 工具无用户上下文，由上层 API 补充
+                    scene_id=1,     # 默认食物检测场景
+                    task_uuid=task_uuid_str,
+                    image_path=str(image_path),
+                    status="completed",
+                    detections=detections,
+                    total_objects=len(detections),
+                    inference_time=None,
+                    conf_threshold=conf_threshold,
+                    iou_threshold=0.45,
+                )
+                db.add(task)
+                db.commit()
+            except Exception:
+                db.rollback()
+                task_uuid_str = None
+            finally:
+                db.close()
+        except Exception as exc:
+            logger.warning("保存检测记录失败（数据库可能未就绪）: %s", exc)
+
         return json.dumps(
             {
                 "success": True,
                 "mode": "yolo",
                 "image_id": image_id,
+                "task_uuid": task_uuid_str,
                 "detections": detections,
                 "total_objects": len(detections),
                 "low_confidence_count": low_conf_count,

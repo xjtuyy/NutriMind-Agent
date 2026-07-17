@@ -24,12 +24,9 @@ logger = get_logger("main")
 @asynccontextmanager
 async def lifespan(_app: FastAPI):
     """启动时执行初始化"""
-    # # 1. 初始化 MinIO 存储桶
-    # init_minio()
-    # # 2. 初始化 Redis 连接
-    # init_redis()
-    # # 3. 初始化数据库表和种子数据
-    # init_seed()
+    from app.database.seed import init_db, init_seed
+    init_db()
+    init_seed()
     yield
     # 关闭时执行清理
 
