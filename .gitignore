@@ -1,4 +1,4 @@
 backend/.coverage
 backend/test.db
 backend/data/captures/
-backend/uv.lock
+# backend/uv.lock
