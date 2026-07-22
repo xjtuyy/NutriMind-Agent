@@ -3,7 +3,7 @@ import json
 from unittest.mock import AsyncMock, patch
 
 from sqlalchemy.exc import SQLAlchemyError
-from langchain_core.messages import AIMessage, ToolMessage
+from langchain_core.messages import AIMessage, HumanMessage, ToolMessage
 
 from fastapi.testclient import TestClient
 
@@ -365,6 +365,66 @@ def test_agent_registers_knowledge_and_web_tools():
     tool_names = {tool.name for tool in agent_graph.AGENT_TOOLS}
     assert "search_nutrition_knowledge" in tool_names
     assert "search_web_evidence" in tool_names
+
+
+def test_category_browse_tool_requires_an_explicit_list_request():
+    direct_food_state = {"messages": [HumanMessage(content="薯条的热量是多少？")]}
+    category_list_state = {"messages": [HumanMessage(content="列出零食分类下的所有食物")]}
+    short_category_list_state = {"messages": [HumanMessage(content="水果有哪些？")]}
+
+    assert not agent_graph._category_browse_requested(direct_food_state)
+    assert agent_graph.CATEGORY_BROWSE_TOOL_NAME not in {
+        tool.name for tool in agent_graph._tools_for_state(direct_food_state)
+    }
+    assert agent_graph._category_browse_requested(category_list_state)
+    assert agent_graph._category_browse_requested(short_category_list_state)
+    assert agent_graph.CATEGORY_BROWSE_TOOL_NAME in {
+        tool.name for tool in agent_graph._tools_for_state(category_list_state)
+    }
+
+    direct_food_state["messages"].append(AIMessage(
+        content="",
+        tool_calls=[{
+            "name": agent_graph.CATEGORY_BROWSE_TOOL_NAME,
+            "args": {"category": "snack"},
+            "id": "unexpected-category-call",
+            "type": "tool_call",
+        }],
+    ))
+    assert asyncio.run(agent_graph.router_node(direct_food_state)) == "direct_tools"
+
+
+def test_agent_forces_a_final_answer_after_max_tool_rounds():
+    class _FinalModel:
+        async def ainvoke(self, messages):
+            assert "本轮必须收尾" in messages[0].content
+            return AIMessage(content="已根据已查询到的苹果营养数据给出结论。")
+
+    messages = [HumanMessage(content="苹果有什么营养？")]
+    for index in range(agent_graph.MAX_TOOL_ROUNDS):
+        tool_call_id = f"food-{index}"
+        messages.extend([
+            AIMessage(
+                content="",
+                tool_calls=[{
+                    "name": "query_food_calories",
+                    "args": {"food_name": "apple"},
+                    "id": tool_call_id,
+                    "type": "tool_call",
+                }],
+            ),
+            ToolMessage(
+                content="苹果每 100g 含 52 kcal。",
+                tool_call_id=tool_call_id,
+                name="query_food_calories",
+            ),
+        ])
+
+    with patch("app.services.agent_graph._get_final_llm", return_value=_FinalModel()):
+        result = asyncio.run(agent_graph.agent_node({"messages": messages}))
+
+    assert agent_graph._current_turn_tool_rounds({"messages": messages}) == agent_graph.MAX_TOOL_ROUNDS
+    assert result["messages"][0].content == "已根据已查询到的苹果营养数据给出结论。"
 
 
 def test_conversation_extraction_uses_combined_text():
