@@ -163,9 +163,6 @@ docker run -d -p 5432:5432 \
 uv run uvicorn main:app --host 0.0.0.0 --port 9999 --reload
 ```
 
-- Swagger 文档：<http://localhost:9999/docs>
-- ReDoc 文档：<http://localhost:9999/redoc>
-
 ### 6. 运行测试
 
 ```bash
@@ -230,7 +227,7 @@ DEFAULT_DETECTION_MODEL=yolo11_food_best.pt
 
 **训练配置：**
 - 基础模型：`yolo11s.pt` (COCO 预训练)
-- 超参：50 epochs，batch=32，img_size=640，patience=15
+- 超参：100 epochs，batch=32，img_size=640，patience=15
 - 自动 batch 降级（OOM 时 32 → 24 → 16 → 12 → 8 → 4 → 2）
 - AMP 混合精度 + RAM 缓存 + Mosaic 增强
 
